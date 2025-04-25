@@ -2,6 +2,10 @@
 
 A collection of versioned project rules to enhance CDK application development with Amazon Q Developer.
 
+## Call for AWS Community Contributions
+
+> **We need your expertise!** This project is actively seeking contributions from AWS Community members. While this is only a start to establish a foundation of CDK best practices, we recognize that the collective wisdom of the community will make these rules more robust, comprehensive, and valuable. Whether you have insights on specific AWS services, architectural patterns, security considerations, or performance optimizations - your experience can help shape these guidelines and benefit the entire CDK developer community.
+
 ## Overview
 
 This repository provides a set of standardized project rules that can be used with Amazon Q Developer to improve the development experience when working with AWS Cloud Development Kit (CDK). These rules help developers follow best practices, maintain consistency, and accelerate development of CDK applications.
