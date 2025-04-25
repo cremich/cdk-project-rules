@@ -34,6 +34,7 @@
 - Include the resource type in the logical ID
 - Use descriptive property names
 - Use generated resource names instead of physical names whenever possible.
+- If the construct has only one or a single main child resource, call it "Resource" to use the defaultChild functionality of CDK
 
 ### Composition and Inheritence
 
