@@ -19,76 +19,91 @@
 - Name test files with the `.test.ts` suffix
 - Match test file names to the files they are testing: `search-stack.test.ts`
 
-## Folder Organization
+## Project Organization
+
+### Service-Based Structure
 
 ```
-app-name/
-├── bin/                      # Entry point for CDK app
-├── lib/                      # Main CDK constructs and stacks
-│   ├── search/               # Contructs and stacks related to the search functionality
-│   │   ├── search-stack.ts
-│   │   └── constructs/
-│   ├── website/              # Contructs and stacks related to the website
-│   │   ├── website-stack.ts
-│   │   └── constructs/
-│   ├── auth/                 # Contructs and stacks related to the authentication functionality
-│   │   ├── auth-stack.ts
-│   │   └── constructs/
-│   └── api/                  # Contructs and stacks related to the api functionality
-│       ├── api-stack.ts
-│       └── constructs/
-├── common/                   # Shared constructs and utilities
-│   ├── compute/              # Compute-related constructs (Lambda, ECS, etc.)
-│   ├── storage/              # Storage-related constructs (S3, DynamoDB, etc.)
-│   ├── network/              # Network-related constructs (VPC, subnets, etc.)
-│   └── services/             # Service-specific constructs
-├── config/                   # Environment-specific configuration
-├── test/                     # Test files
-└── utilities/                # Helper functions and scripts
+service-name/              # One CDK app per deployable service
+├── bin/                  # Entry point for CDK app
+├── lib/                  # Main CDK constructs and stack
+│   ├── constructs/      # Service-specific constructs
+│   └── stack.ts         # Single stack for the service
+├── test/                # Test files
+└── utilities/           # Helper functions and scripts
 ```
 
-- Group stacks and related constructs by its bounded contexts in dedicated directories under `lib/`
-- Group constructs and utitlities shared across multiple bounded contexts in the `common/` folder.
+- Create separate CDK apps for each independently deployable service
+- Keep services small and focused on a single bounded context
+- Shared resources (VPC, DNS zones) should be in their own CDK apps
+- Use separate repositories for services that have independent lifecycles
 
-## Separation of Logic and Configuration
+## Stack Design
 
-### Configuration Management
+### Single Stack Approach
 
-- Store environment-specific configuration in the `config/` directory
-- Use TypeScript interfaces to define configuration shapes
-- Never hardcode environment-specific values in construct code
+- Use a single stack per CDK app to maintain deployment atomicity
+- Keep related resources together in one stack to preserve rollback capabilities
+- Avoid splitting related resources across multiple stacks to prevent cross-stack reference issues
+- Use constructs (L3) for logical grouping instead of multiple stacks
+- Only create multiple stacks when:
+  - Deploying to different regions
+  - Exceeding CloudFormation resource limits (500 resources)
+  - Working with truly independent shared resources (VPC, DNS zones)
+
+### Environment Configuration
+
+- Define environment configurations through stack properties
+- Configure environments in the CDK app entry point (bin/)
+- Avoid using CDK context or environment variables for configuration
+- Synthesize all environment configurations simultaneously
+
+Example:
 
 ```typescript
-// config/database-config.ts
-export interface DatabaseConfig {
-  instance: {
+// bin/service.ts
+const app = new cdk.App();
+
+new ServiceStack(app, 'ServiceStackDev', {
+  env: { account: '1234', region: 'us-east-1' },
+  config: devConfig
+});
+
+new ServiceStack(app, 'ServiceStackProd', {
+  env: { account: '5678', region: 'us-east-1' },
+  config: prodConfig
+});
+```
+
+### Stack Properties
+
+- Define clear interfaces for stack configuration
+- Pass environment-specific configuration through stack properties
+- Keep all environment-specific values in the CDK app entry point
+
+```typescript
+// lib/stack.ts
+export interface ServiceStackProps extends cdk.StackProps {
+  config: {
     instanceType: string;
-    allocatedStorage: number;
-    backupRetentionDays: number;
-  };
-  security: {
-    allowedCidrs: string[];
+    capacity: number;
+    // other configuration properties
   };
 }
-```
 
-### Environment Context
-
-- Use the CDK context to determine the name of the deployment environment
-- Load the appropriate configuration based on the environment
-
-```typescript
-// lib/search/search-stack.ts
-import { devDatabaseConfig, prodDatabaseConfig } from "../../config/database-config";
-
-export class SearchStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+export class ServiceStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props: ServiceStackProps) {
     super(scope, id, props);
-
-    const environmentName = this.node.tryGetContext("environmentName") || "dev";
-    const config = environmentName === "prod" ? prodDatabaseConfig : devDatabaseConfig;
-
-    // Use config to create resources
+    // Use props.config to create resources
   }
 }
 ```
+
+## Best Practices
+
+- Synthesize all environments at once to catch issues early
+- Use the CDK assembly (cdk.out) for deployments instead of re-synthesizing
+- Keep services small and focused to avoid stack splitting
+- Use constructs for logical grouping of resources
+- Maintain 1:1 relationships within a stack
+- Move 1:N relationships to separate CDK apps
