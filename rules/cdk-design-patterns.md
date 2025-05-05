@@ -64,4 +64,4 @@
 
 - Use CDK aspects to modify, validate, or enforce standards across all constructs within a given scope.
 - Use CDK aspects to apply consistent tags across all resources
-- Use CDK aspects to apply removel policies for ephemeral environments
+- Use CDK aspects to apply removal policies for ephemeral environments
